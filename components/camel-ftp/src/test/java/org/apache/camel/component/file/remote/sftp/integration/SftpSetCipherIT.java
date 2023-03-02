@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.file.remote.sftp.integration;
 
+import com.jcraft.jsch.JSch;
 import java.io.File;
 
 import org.apache.camel.Exchange;
@@ -45,6 +46,24 @@ public class SftpSetCipherIT extends SftpServerTestSupport {
         // did we actually set the correct cipher?
         SftpEndpoint endpoint = context.getEndpoint(uri, SftpEndpoint.class);
         assertEquals(cipher, endpoint.getConfiguration().getCiphers());
+    }
+
+    @Test
+    public void testGlobalJSchCipherNotChangedWhenEndpointCiphersSet() {
+        // given
+        String jschCipher = "aes128-ctr";
+        String jschCipherKey = "cipher.s2c";
+        JSch.setConfig(jschCipherKey, jschCipher);
+        assertEquals(jschCipher, JSch.getConfig(jschCipherKey));
+
+        // when
+        String uri
+                = "sftp://localhost:{{ftp.server.port}}/{{ftp.root.dir}}?username=admin&password=admin&ciphers="
+                + "aes256-ctr";
+        template.sendBodyAndHeader(uri, "Hello World", Exchange.FILE_NAME, "hello.txt");
+
+        // then
+        assertEquals(jschCipher, JSch.getConfig(jschCipherKey));
     }
 
 }
